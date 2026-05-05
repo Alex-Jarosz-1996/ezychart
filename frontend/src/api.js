@@ -26,3 +26,13 @@ export const fetchFinancials = (symbol, token) =>
 
 export const fetchAll = (symbol, token) =>
   Promise.all([fetchQuote(symbol, token), fetchFinancials(symbol, token)])
+
+export const getEODChart = (symbol, token, range = '1y') =>
+  fetch(`${BASE}/chart/eod/${symbol.toUpperCase()}?rng=${range}`, {
+    headers: authHeaders(token),
+  }).then(handle)
+
+export const getIntradayChart = (symbol, token, interval = '5min') =>
+  fetch(`${BASE}/chart/intraday/${symbol.toUpperCase()}?interval=${interval}`, {
+    headers: authHeaders(token),
+  }).then(handle)

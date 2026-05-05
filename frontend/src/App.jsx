@@ -8,6 +8,7 @@ import MetricsGroup from './components/SingleView/MetricsGroup.jsx'
 import ReportedFinancials from './components/SingleView/ReportedFinancials.jsx'
 import CompareSearchBar from './components/CompareView/CompareSearchBar.jsx'
 import CompareTable from './components/CompareView/CompareTable.jsx'
+import StockChart from './components/Chart/StockChart.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 
 const MAX_COMPARE = 10
@@ -62,8 +63,11 @@ export default function App() {
 
   const [singleLoading, setSingleLoading] = useState(false)
   const [singleError, setSingleError] = useState(null)
+  const [currentSymbol, setCurrentSymbol] = useState(null)
   const [quote, setQuote] = useState(null)
   const [financials, setFinancials] = useState(null)
+
+  const [chartSymbol, setChartSymbol] = useState(null)
 
   const [compareTickers, setCompareTickers] = useState(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [] }
@@ -86,6 +90,7 @@ export default function App() {
   const handleSingleSearch = async (symbol) => {
     setSingleLoading(true)
     setSingleError(null)
+    setCurrentSymbol(symbol.toUpperCase())
     setQuote(null)
     setFinancials(null)
     try {
@@ -139,7 +144,7 @@ export default function App() {
       </div>
 
       <div className={styles.tabs}>
-        {[['single', 'Single Ticker'], ['compare', 'Compare']].map(([key, label]) => (
+        {[['single', 'Ticker'], ['compare', 'Compare'], ['chart', 'Chart']].map(([key, label]) => (
           <button
             key={key}
             className={`${styles.tab} ${tab === key ? styles.tabActive : ''}`}
@@ -167,6 +172,16 @@ export default function App() {
           {!singleLoading && !quote && !singleError && (
             <div className={styles.empty}>Search for a ticker to get started.</div>
           )}
+        </div>
+      )}
+
+      {tab === 'chart' && (
+        <div>
+          <SearchBar onSearch={setChartSymbol} />
+          {chartSymbol
+            ? <StockChart symbol={chartSymbol} token={token} />
+            : <div className={styles.empty}>Search for a ticker to view its chart.</div>
+          }
         </div>
       )}
 

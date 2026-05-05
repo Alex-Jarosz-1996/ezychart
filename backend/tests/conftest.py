@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, timezone
 os.environ.setdefault("FINNHUB_API_KEY", "test_key")
 os.environ.setdefault("JWT_SECRET", "test_jwt_secret")
 os.environ.setdefault("APP_PASSWORD", "test_password")
+os.environ.setdefault("FMP_API_KEY", "test_fmp_key")
+os.environ.setdefault("STOCKDATA_API_KEY", "test_stockdata_key")
 
 import jwt
 import pytest
@@ -102,5 +104,33 @@ MOCK_FINANCIALS_REPORTED = {
                 ],
             }
         }
+    ]
+}
+
+MOCK_FMP_EOD = [
+    {"symbol": "AAPL", "date": "2024-01-03", "price": 189.0, "volume": 48000000},
+    {"symbol": "AAPL", "date": "2024-01-02", "price": 187.0, "volume": 50000000},
+]
+
+MOCK_STOCKDATA_INTRADAY = {
+    "data": [
+        {
+            "ticker": "AAPL",
+            "date": "2024-01-03T10:00:00",
+            "open": 187.0,
+            "high": 188.5,
+            "low": 186.5,
+            "close": 188.0,
+            "volume": 1200000,
+        },
+        {
+            "ticker": "AAPL",
+            "date": "2024-01-03T10:05:00",
+            "open": 188.0,
+            "high": 189.0,
+            "low": 187.5,
+            "close": 188.5,
+            "volume": 900000,
+        },
     ]
 }
