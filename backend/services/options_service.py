@@ -18,7 +18,11 @@ class OptionsRateLimitError(Exception):
     pass
 
 
-def _fetch(underlying_ticker: str, contract_type: str) -> list[dict]:
+def _fetch(
+    underlying_ticker: str,
+    contract_type: str,
+    strike_price: float | None = None,
+) -> list[dict]:
     try:
         contracts = list(
             itertools.islice(
@@ -27,6 +31,7 @@ def _fetch(underlying_ticker: str, contract_type: str) -> list[dict]:
                     contract_type=contract_type,
                     expired=False,
                     limit=_LIMIT,
+                    strike_price=strike_price,
                 ),
                 _LIMIT,
             )
@@ -40,7 +45,7 @@ def _fetch(underlying_ticker: str, contract_type: str) -> list[dict]:
     ]
 
 
-def get_options_chain(symbol: str) -> dict:
-    calls = _fetch(symbol, "call")
-    puts = _fetch(symbol, "put")
+def get_options_chain(symbol: str, strike_price: float | None = None) -> dict:
+    calls = _fetch(symbol, "call", strike_price=strike_price)
+    puts = _fetch(symbol, "put", strike_price=strike_price)
     return {"symbol": symbol, "calls": calls, "puts": puts}

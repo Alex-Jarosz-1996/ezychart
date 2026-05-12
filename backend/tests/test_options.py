@@ -35,7 +35,7 @@ def test_options_symbol_is_uppercased(client: TestClient, auth_headers, mocker):
 
     client.get("/api/options/aapl", headers=auth_headers)
 
-    spy.assert_called_once_with("AAPL")
+    spy.assert_called_once_with("AAPL", strike_price=None)
 
 
 def test_options_returns_404_when_empty(client: TestClient, auth_headers, mocker):
@@ -80,3 +80,15 @@ def test_options_rejects_invalid_symbol(client: TestClient, auth_headers):
     response = client.get("/api/options/AAPL123!", headers=auth_headers)
 
     assert response.status_code == 422
+
+
+def test_options_passes_strike_price_to_service(
+    client: TestClient, auth_headers, mocker
+):
+    spy = mocker.patch(
+        "services.options_service.get_options_chain", return_value=MOCK_OPTIONS
+    )
+
+    client.get("/api/options/AAPL?strike_price=270", headers=auth_headers)
+
+    spy.assert_called_once_with("AAPL", strike_price=270.0)

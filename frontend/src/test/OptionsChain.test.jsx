@@ -32,8 +32,8 @@ test('renders calls and puts tables after load', async () => {
 
   expect(screen.getByText('Calls')).toBeInTheDocument()
   expect(screen.getByText('Puts')).toBeInTheDocument()
-  expect(screen.getByText('O:AAPL260511C00235000')).toBeInTheDocument()
-  expect(screen.getByText('O:AAPL260511P00235000')).toBeInTheDocument()
+  expect(screen.getByText('AAPL May 11 2026 $235 Call')).toBeInTheDocument()
+  expect(screen.getByText('AAPL May 11 2026 $235 Put')).toBeInTheDocument()
   expect(screen.getAllByText('2026-05-11')).toHaveLength(2)
 })
 
@@ -71,4 +71,17 @@ test('does not fetch when symbol is null', () => {
   render(<OptionsChain symbol={null} token="tok" onUnauthorized={vi.fn()} />)
 
   expect(spy).not.toHaveBeenCalled()
+})
+
+test('passes strike price to API when filter is applied', async () => {
+  const spy = vi.spyOn(api, 'fetchOptionsChain').mockResolvedValue(MOCK_DATA)
+
+  render(<OptionsChain symbol="AAPL" token="tok" onUnauthorized={vi.fn()} />)
+
+  await waitFor(() => expect(spy).toHaveBeenCalledWith('AAPL', 'tok', null))
+
+  fireEvent.change(screen.getByPlaceholderText(/strike price/i), { target: { value: '270' } })
+  fireEvent.submit(screen.getByPlaceholderText(/strike price/i).closest('form'))
+
+  await waitFor(() => expect(spy).toHaveBeenCalledWith('AAPL', 'tok', 270))
 })

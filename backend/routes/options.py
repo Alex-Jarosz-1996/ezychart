@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 
 from core.dependencies import get_current_user
 from core.limiter import limiter
@@ -17,10 +17,13 @@ router = APIRouter(prefix="/api")
 def get_options_chain(
     request: Request,
     symbol: str = Path(..., pattern=r"^[A-Za-z.]{1,10}$"),
+    strike_price: float | None = Query(None, gt=0),
     _=Depends(get_current_user),
 ):
     try:
-        data = options_service.get_options_chain(symbol.upper())
+        data = options_service.get_options_chain(
+            symbol.upper(), strike_price=strike_price
+        )
     except OptionsRateLimitError:
         raise HTTPException(
             status_code=429, detail="Rate limit exceeded, please try again shortly"

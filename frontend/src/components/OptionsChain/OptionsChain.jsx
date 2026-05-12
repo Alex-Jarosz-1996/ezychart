@@ -24,13 +24,24 @@ export default function OptionsChain({ symbol, token, onUnauthorized }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [strikeInput, setStrikeInput] = useState('')
+  const [strikePrice, setStrikePrice] = useState(null)
 
+  // New symbol → wipe everything so a fresh search never shows stale rows
+  useEffect(() => {
+    setData(null)
+    setError(null)
+    setStrikeInput('')
+    setStrikePrice(null)
+  }, [symbol])
+
+  // Fetch whenever symbol or strikePrice changes.
+  // When only strikePrice changes, data stays visible during the load.
   useEffect(() => {
     if (!symbol) return
     setLoading(true)
-    setData(null)
     setError(null)
-    fetchOptionsChain(symbol, token)
+    fetchOptionsChain(symbol, token, strikePrice)
       .then(setData)
       .catch((e) => {
         if (e.message === 'Unauthorized' || e.message.includes('401')) {
@@ -40,37 +51,74 @@ export default function OptionsChain({ symbol, token, onUnauthorized }) {
         setError(e.message)
       })
       .finally(() => setLoading(false))
-  }, [symbol, token, onUnauthorized])
+  }, [symbol, token, strikePrice, onUnauthorized])
 
-  if (loading) return <div>Loading...</div>
-  if (error) return <div>{error}</div>
+  const handleStrikeSubmit = (e) => {
+    e.preventDefault()
+    const val = parseFloat(strikeInput)
+    setStrikePrice(isNaN(val) || val <= 0 ? null : val)
+  }
+
+  const handleStrikeClear = () => {
+    setStrikeInput('')
+    setStrikePrice(null)
+  }
+
+  if (!data && loading) return <div className={styles.loading}>Loading...</div>
+  if (!data && error) return <div className={styles.error}>{error}</div>
   if (!data) return null
 
   return (
-    <div className={styles.grid}>
-      <ContractTable title="Calls" contracts={data.calls} />
-      <ContractTable title="Puts" contracts={data.puts} />
+    <div>
+      <form className={styles.filterRow} onSubmit={handleStrikeSubmit}>
+        <div className={styles.strikeInputWrapper}>
+          <span className={styles.strikePrefix}>$</span>
+          <input
+            type="number"
+            min="0"
+            step="any"
+            placeholder="Strike price (optional)"
+            value={strikeInput}
+            onChange={(e) => setStrikeInput(e.target.value)}
+            className={styles.strikeInput}
+          />
+        </div>
+        <button type="submit" className={styles.filterBtn}>Filter</button>
+        {strikePrice !== null && (
+          <button type="button" className={styles.clearBtn} onClick={handleStrikeClear}>Clear</button>
+        )}
+      </form>
+      {loading && <div className={styles.loading}>Loading...</div>}
+      {error && <div className={styles.error}>{error}</div>}
+      <div className={styles.grid}>
+        <ContractTable title="Calls" contracts={data.calls} variant="call" />
+        <ContractTable title="Puts" contracts={data.puts} variant="put" />
+      </div>
     </div>
   )
 }
 
-function ContractTable({ title, contracts }) {
+function ContractTable({ title, contracts, variant }) {
+  const rowClass = variant === 'call' ? styles.callRow : styles.putRow
   return (
     <div className={styles.section}>
-      <div className={styles.sectionTitle}>{title}</div>
+      <div className={styles.sectionTitle}>
+        {title}
+        <span className={styles.count}>{contracts.length}</span>
+      </div>
       {contracts.length === 0 ? (
         <div className={styles.empty}>No {title.toLowerCase()} found.</div>
       ) : (
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Contract Ticker</th>
-              <th>Expiration Date</th>
+              <th>Contract</th>
+              <th>Expiry</th>
             </tr>
           </thead>
           <tbody>
             {contracts.map((c) => (
-              <tr key={c.ticker}>
+              <tr key={c.ticker} className={rowClass}>
                 <td>{formatTicker(c.ticker)}</td>
                 <td>{c.expiration_date}</td>
               </tr>

@@ -9,12 +9,43 @@
 }
 
 .sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 8px;
+}
+
+.count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1px 7px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.loading {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.error {
+  padding: 12px 16px;
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: 8px;
+  color: var(--error-text);
+  margin-bottom: 20px;
+  font-size: 14px;
 }
 
 .table {
@@ -51,4 +82,55 @@
   color: var(--text-muted);
   font-size: 13px;
   padding: 12px 0;
+}
+
+.filterRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.strikeInputWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.strikePrefix {
+  position: absolute;
+  left: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.strikeInput {
+  padding: 6px 12px 6px 22px;
+  font-size: 13px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  width: 180px;
+}
+
+.filterBtn,
+.clearBtn {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.callRow {
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.putRow {
+  background: rgba(239, 68, 68, 0.05);
 }

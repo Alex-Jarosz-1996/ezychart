@@ -42,5 +42,9 @@ export const getIntradayChart = (symbol, token, interval = 'minute') =>
     headers: authHeaders(token),
   }).then(handle)
 
-export const fetchOptionsChain = (symbol, token) =>
-  fetch(`${BASE}/options/${symbol.toUpperCase()}`, { headers: authHeaders(token) }).then(handle)
+export const fetchOptionsChain = (symbol, token, strikePrice = null) => {
+  const url = strikePrice
+    ? `${BASE}/options/${symbol.toUpperCase()}?strike_price=${strikePrice}`
+    : `${BASE}/options/${symbol.toUpperCase()}`
+  return fetch(url, { headers: authHeaders(token) }).then(handle)
+}
