@@ -1,5 +1,5 @@
 {
-  "name": "finnhub-dashboard",
+  "name": "ezychart",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,9 @@
     "lightweight-charts": "^5.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "recharts": "^3.8.1"
+    "react-markdown": "^10.1.0",
+    "recharts": "^3.8.1",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

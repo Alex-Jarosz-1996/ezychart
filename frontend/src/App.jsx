@@ -12,6 +12,7 @@ import StockChart from './components/Chart/StockChart.jsx'
 import OptionsChain from './components/OptionsChain/OptionsChain.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import ResearchPanel from './components/Research/ResearchPanel.jsx'
+import BacktestPanel from './components/Backtest/BacktestPanel.jsx'
 
 const MAX_COMPARE = 10
 
@@ -148,7 +149,7 @@ export default function App() {
       </div>
 
       <div className={styles.tabs}>
-        {[['single', 'Ticker'], ['compare', 'Compare'], ['chart', 'Chart'], ['options', 'Options']].map(([key, label]) => (
+        {[['single', 'Ticker'], ['compare', 'Compare'], ['chart', 'Chart'], ['options', 'Options'], ['backtest', 'Backtest']].map(([key, label]) => (
           <button
             key={key}
             className={`${styles.tab} ${tab === key ? styles.tabActive : ''}`}
@@ -207,6 +208,11 @@ export default function App() {
           ) : (
             <CompareTable tickers={compareTickers} data={compareData} onRemove={handleCompareRemove} />
           )}
+        </div>
+      )}
+      {tab === 'backtest' && (
+        <div>
+          <BacktestPanel token={token} />
         </div>
       )}
     </div>

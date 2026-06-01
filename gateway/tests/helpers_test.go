@@ -32,6 +32,6 @@ func newTestGateway(t *testing.T) (*core.Gateway, *httptest.Server) {
 	t.Cleanup(upstream.Close)
 
 	target, _ := url.Parse(upstream.URL)
-	gw := core.NewGateway(s, core.NewProxy(target, s))
+	gw := core.NewGateway(s, core.NewProxy(target, s), core.NewBacktestProxy(target))
 	return gw, upstream
 }

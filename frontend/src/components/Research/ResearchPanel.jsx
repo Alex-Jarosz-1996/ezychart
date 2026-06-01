@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { sendChatMessage } from '../../api.js'
 import styles from './ResearchPanel.module.css'
 
@@ -73,7 +75,9 @@ export default function ResearchPanel({ token }) {
           )}
           {history.map((msg, i) => (
             <div key={i} className={msg.role === 'user' ? styles.userMsg : msg.error ? styles.errorMsg : styles.aiMsg}>
-              {msg.content}
+              {msg.role === 'ai' && !msg.error
+                ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                : msg.content}
             </div>
           ))}
           {loading && (

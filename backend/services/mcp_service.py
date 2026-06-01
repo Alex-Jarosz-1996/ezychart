@@ -12,6 +12,7 @@ _FMP_MCP_URL = (
 
 
 async def call_tool(name: str, arguments: dict[str, Any]) -> str:
+    arguments.setdefault("endpoint", name)
     async with Client(_FMP_MCP_URL) as client:
         result = await client.call_tool(name, arguments)
         content = result.content if hasattr(result, "content") else result

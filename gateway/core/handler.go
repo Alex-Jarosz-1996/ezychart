@@ -9,22 +9,30 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 )
 
 // Gateway is the HTTP handler. It checks the Redis cache, enforces API quotas,
-// and proxies requests to the FastAPI backend.
+// and proxies requests to the FastAPI backend or backtest service.
 type Gateway struct {
-	Store *Store
-	Proxy *httputil.ReverseProxy
+	Store          *Store
+	Proxy          *httputil.ReverseProxy
+	BacktestProxy  *httputil.ReverseProxy
 }
 
-// NewGateway creates a Gateway wired to the given store and proxy.
-func NewGateway(store *Store, proxy *httputil.ReverseProxy) *Gateway {
-	return &Gateway{Store: store, Proxy: proxy}
+// NewGateway creates a Gateway wired to the given store and proxies.
+func NewGateway(store *Store, proxy *httputil.ReverseProxy, backtestProxy *httputil.ReverseProxy) *Gateway {
+	return &Gateway{Store: store, Proxy: proxy, BacktestProxy: backtestProxy}
 }
 
 // HandleAPI is the main entry point for all /api/* requests except /api/quota/status.
 func (g *Gateway) HandleAPI(w http.ResponseWriter, r *http.Request) {
+	// Backtest requests bypass quota and cache — route directly to the backtest service.
+	if strings.HasPrefix(r.URL.Path, "/api/backtest/") {
+		g.BacktestProxy.ServeHTTP(w, r)
+		return
+	}
+
 	ctx := r.Context()
 	rule, hasRule := RuleFor(r.URL.Path)
 
@@ -100,6 +108,19 @@ func (g *Gateway) HandleQuotaStatus(w http.ResponseWriter, r *http.Request) {
 	status := g.Store.AllQuotaStatus(r.Context())
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(status)
+}
+
+// NewBacktestProxy builds a simple reverse proxy to the backtest service with
+// no caching or quota tracking.
+func NewBacktestProxy(target *url.URL) *httputil.ReverseProxy {
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		log.Printf("backtest proxy error for %s: %v", r.URL.Path, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadGateway)
+		json.NewEncoder(w).Encode(map[string]string{"error": "backtest service unavailable"})
+	}
+	return proxy
 }
 
 // NewProxy builds a reverse proxy targeting upstream that captures successful

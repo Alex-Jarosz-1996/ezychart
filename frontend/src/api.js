@@ -49,6 +49,13 @@ export const sendChatMessage = (message, token) =>
     body: JSON.stringify({ message }),
   }).then(handle)
 
+export const runBacktest = (prices, strategies, params, token) =>
+  fetch(`${BASE}/backtest/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+    body: JSON.stringify({ prices, strategies, params }),
+  }).then(handle)
+
 export const fetchOptionsChain = (symbol, token, strikePrice = null) => {
   const url = strikePrice
     ? `${BASE}/options/${symbol.toUpperCase()}?strike_price=${strikePrice}`

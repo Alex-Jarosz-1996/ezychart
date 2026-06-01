@@ -1,4 +1,4 @@
-# finnhub-dashboard
+# EzyChart
 
 A stock financial dashboard SPA. FastAPI backend + React frontend, with a Go API gateway (quota tracking + Redis caching) sitting between the browser and the backend.
 
