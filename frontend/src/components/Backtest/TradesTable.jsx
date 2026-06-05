@@ -1,6 +1,6 @@
 import styles from './TradesTable.module.css'
 
-const STRATEGY_LABELS = { sma: 'SMA Crossover', rsi: 'RSI', macd: 'MACD', vmacd: 'VMACD' }
+const STRATEGY_LABELS = { sma: 'SMA Crossover', rsi: 'RSI', macd: 'MACD', vmacd: 'VMACD', combined: 'Combined' }
 
 function fmtDate(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -14,22 +14,38 @@ function fmtPct(n) {
   return `${sign}${n.toFixed(2)}%`
 }
 
-export default function TradesTable({ results }) {
+function fmtDollar(n) {
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function compoundedValue(trades, initial) {
+  return trades.reduce((acc, t) => acc * (1 + t.profit_pct / 100), initial)
+}
+
+export default function TradesTable({ results, initialInvestment = 10_000 }) {
   const strategies = Object.keys(results)
   if (strategies.length === 0) return null
 
   return (
     <div className={styles.wrap}>
       {strategies.map((strat) => {
-        const { trades, total_profit_pct } = results[strat]
+        const { trades } = results[strat]
         const label = STRATEGY_LABELS[strat] ?? strat.toUpperCase()
+        const finalValue = compoundedValue(trades, initialInvestment)
+        const gain = finalValue - initialInvestment
+        const compoundPct = trades.length > 0 ? (finalValue / initialInvestment - 1) * 100 : 0
         return (
           <div key={strat} className={styles.section}>
             <div className={styles.sectionHeader}>
               <span className={styles.stratLabel}>{label}</span>
-              <span className={`${styles.total} ${total_profit_pct >= 0 ? styles.pos : styles.neg}`}>
-                Total: {fmtPct(total_profit_pct)}
+              <span className={`${styles.total} ${compoundPct >= 0 ? styles.pos : styles.neg}`}>
+                Total: {fmtPct(compoundPct)}
               </span>
+              {trades.length > 0 && (
+                <span className={`${styles.growth} ${gain >= 0 ? styles.pos : styles.neg}`}>
+                  {fmtDollar(initialInvestment)} → {fmtDollar(finalValue)} ({gain >= 0 ? '+' : ''}{fmtDollar(gain)})
+                </span>
+              )}
               <span className={styles.count}>{trades.length} trade{trades.length !== 1 ? 's' : ''}</span>
             </div>
             {trades.length === 0 ? (

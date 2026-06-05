@@ -10,6 +10,7 @@ import {
   CartesianGrid,
 } from 'recharts'
 import { getCandlestickChart, getEODChart, getIntradayChart } from '../../api.js'
+import { niceScale } from '../../utils/chartUtils.js'
 import CandlestickChart from './CandlestickChart.jsx'
 import styles from './StockChart.module.css'
 
@@ -142,13 +143,13 @@ export default function StockChart({ symbol, token }) {
     : null
 
   let priceDomain = ['auto', 'auto']
+  let priceTicks
   if (data?.length) {
     const vals = data.map((d) => d[priceField]).filter(Number.isFinite)
     if (vals.length) {
-      const min = Math.min(...vals)
-      const max = Math.max(...vals)
-      const pad = (max - min) * 0.05 || min * 0.01
-      priceDomain = [min - pad, max + pad]
+      const { min, max, ticks } = niceScale(Math.min(...vals), Math.max(...vals))
+      priceDomain = [min, max]
+      priceTicks = ticks
     }
   }
 
@@ -280,6 +281,7 @@ export default function StockChart({ symbol, token }) {
                   <YAxis
                     yAxisId="price"
                     domain={priceDomain}
+                    ticks={priceTicks}
                     tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
                     tickLine={false}
                     tickFormatter={(v) => `$${v.toFixed(0)}`}

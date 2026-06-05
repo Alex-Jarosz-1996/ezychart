@@ -33,6 +33,11 @@
   font-weight: 700;
 }
 
+.growth {
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .count {
   font-size: 12px;
   color: var(--text-secondary);

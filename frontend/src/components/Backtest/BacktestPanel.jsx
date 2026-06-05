@@ -17,6 +17,7 @@ export default function BacktestPanel({ token }) {
   const [rsiParams, setRsiParams] = useState(DEFAULT_RSI)
   const [macdParams, setMacdParams] = useState(DEFAULT_MACD)
   const [vmacdParams, setVmacdParams] = useState(DEFAULT_VMACD)
+  const [initialInvestment, setInitialInvestment] = useState(10000)
   const [priceData, setPriceData] = useState(null)
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -230,6 +231,22 @@ export default function BacktestPanel({ token }) {
             </div>
           )}
 
+          <div className={styles.fieldGroup}>
+            <span className={styles.label}>Initial Investment</span>
+            <div className={styles.paramRow}>
+              <label className={styles.paramLabel}>
+                Amount ($)
+                <input
+                  className={styles.numInput}
+                  type="number"
+                  min={1}
+                  value={initialInvestment}
+                  onChange={(e) => setInitialInvestment(Number(e.target.value))}
+                />
+              </label>
+            </div>
+          </div>
+
           <button className={styles.runBtn} onClick={handleRun} disabled={loading}>
             {loading ? 'Running…' : 'Run Backtest'}
           </button>
@@ -241,7 +258,7 @@ export default function BacktestPanel({ token }) {
       {results && priceData && (
         <>
           <BacktestChart priceData={priceData} results={results} />
-          <TradesTable results={results} />
+          <TradesTable results={results} initialInvestment={initialInvestment} />
         </>
       )}
     </div>

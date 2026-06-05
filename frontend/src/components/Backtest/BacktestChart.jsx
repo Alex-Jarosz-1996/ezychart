@@ -9,6 +9,7 @@ import {
   useXAxisScale,
   useYAxisScale,
 } from 'recharts'
+import { niceScale } from '../../utils/chartUtils.js'
 import styles from './BacktestChart.module.css'
 
 const PROFIT_COLOR = '#22c55e'
@@ -81,10 +82,8 @@ export default function BacktestChart({ priceData, results }) {
   ]
 
   const prices = priceData.map((p) => p.close).filter(Number.isFinite)
-  const min = Math.min(...prices)
-  const max = Math.max(...prices)
-  const pad = (max - min) * 0.05 || min * 0.01
-  const domain = [min - pad, max + pad]
+  const { min, max, ticks: priceTicks } = niceScale(Math.min(...prices), Math.max(...prices))
+  const domain = [min, max]
 
   return (
     <div className={styles.chartWrap}>
@@ -111,6 +110,7 @@ export default function BacktestChart({ priceData, results }) {
           />
           <YAxis
             domain={domain}
+            ticks={priceTicks}
             tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
             tickLine={false}
             tickFormatter={(v) => `$${v.toFixed(0)}`}
