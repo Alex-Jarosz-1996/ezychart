@@ -1,5 +1,21 @@
 import styles from './TradesTable.module.css'
 
+function exportCSV(label, trades, compoundPct, buyAndHoldPct) {
+  const rows = [
+    ['Strategy', 'Buy Date', 'Buy Price', 'Sell Date', 'Sell Price', 'Profit %'],
+    ...trades.map(t => [label, t.buy_date, t.buy_price.toFixed(2), t.sell_date, t.sell_price.toFixed(2), t.profit_pct.toFixed(2)]),
+    [],
+    ['Total Return', `${compoundPct.toFixed(2)}%`],
+    ...(buyAndHoldPct != null ? [['Buy & Hold', `${buyAndHoldPct.toFixed(2)}%`]] : []),
+  ]
+  const csv = rows.map(r => r.join(',')).join('\n')
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+  a.download = `${label.replace(/\s+/g, '_')}_backtest.csv`
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
 const STRATEGY_LABELS = { sma: 'SMA Crossover', rsi: 'RSI', macd: 'MACD', vmacd: 'VMACD', combined: 'Combined' }
 
 function fmtDate(dateStr) {
@@ -22,7 +38,7 @@ function compoundedValue(trades, initial) {
   return trades.reduce((acc, t) => acc * (1 + t.profit_pct / 100), initial)
 }
 
-export default function TradesTable({ results, initialInvestment = 10_000 }) {
+export default function TradesTable({ results, initialInvestment = 10_000, buyAndHoldPct }) {
   const strategies = Object.keys(results)
   if (strategies.length === 0) return null
 
@@ -46,7 +62,17 @@ export default function TradesTable({ results, initialInvestment = 10_000 }) {
                   {fmtDollar(initialInvestment)} → {fmtDollar(finalValue)} ({gain >= 0 ? '+' : ''}{fmtDollar(gain)})
                 </span>
               )}
+              {buyAndHoldPct != null && (
+                <span className={styles.bah}>
+                  B&amp;H: <span className={buyAndHoldPct >= 0 ? styles.pos : styles.neg}>{fmtPct(buyAndHoldPct)}</span>
+                </span>
+              )}
               <span className={styles.count}>{trades.length} trade{trades.length !== 1 ? 's' : ''}</span>
+              {trades.length > 0 && (
+                <button className={styles.exportBtn} onClick={() => exportCSV(label, trades, compoundPct, buyAndHoldPct)}>
+                  Export CSV
+                </button>
+              )}
             </div>
             {trades.length === 0 ? (
               <p className={styles.noTrades}>No completed trades in this period.</p>

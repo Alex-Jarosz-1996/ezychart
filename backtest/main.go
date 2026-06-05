@@ -83,7 +83,11 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 		dates[i] = p.Date
 	}
 
-	resp := BacktestResponse{Results: make(map[string]StrategyResult)}
+	buyAndHoldPct := 0.0
+	if len(closes) > 1 && closes[0] != 0 {
+		buyAndHoldPct = (closes[len(closes)-1]/closes[0] - 1) * 100
+	}
+	resp := BacktestResponse{Results: make(map[string]StrategyResult), BuyAndHoldPct: buyAndHoldPct}
 
 	if len(req.Strategies) == 1 {
 		strat := req.Strategies[0]

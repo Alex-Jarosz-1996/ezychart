@@ -66,5 +66,6 @@ type StrategyResult struct {
 }
 
 type BacktestResponse struct {
-	Results map[string]StrategyResult `json:"results"`
+	Results        map[string]StrategyResult `json:"results"`
+	BuyAndHoldPct  float64                   `json:"buy_and_hold_pct"`
 }

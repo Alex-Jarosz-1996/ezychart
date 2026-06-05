@@ -20,6 +20,7 @@ export default function BacktestPanel({ token }) {
   const [initialInvestment, setInitialInvestment] = useState(10000)
   const [priceData, setPriceData] = useState(null)
   const [results, setResults] = useState(null)
+  const [buyAndHoldPct, setBuyAndHoldPct] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -64,6 +65,7 @@ export default function BacktestPanel({ token }) {
 
       const resp = await runBacktest(prices, selectedStrategies, params, token)
       setResults(resp.results)
+      setBuyAndHoldPct(resp.buy_and_hold_pct ?? null)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -258,7 +260,7 @@ export default function BacktestPanel({ token }) {
       {results && priceData && (
         <>
           <BacktestChart priceData={priceData} results={results} />
-          <TradesTable results={results} initialInvestment={initialInvestment} />
+          <TradesTable results={results} initialInvestment={initialInvestment} buyAndHoldPct={buyAndHoldPct} />
         </>
       )}
     </div>

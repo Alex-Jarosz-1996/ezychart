@@ -88,8 +88,32 @@
   white-space: nowrap;
 }
 
+.chartStack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .chartArea {
   height: 300px;
+}
+
+.subPanel {
+  position: relative;
+  height: 130px;
+}
+
+.panelLabel {
+  position: absolute;
+  top: 6px;
+  left: 68px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .center {

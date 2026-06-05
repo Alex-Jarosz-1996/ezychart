@@ -1,0 +1,64 @@
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.line {
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--border) 25%,
+    var(--bg-app)  50%,
+    var(--border)  75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* QuoteCard skeleton */
+.quoteCard { margin-bottom: 24px; }
+
+.symbolRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.quoteItems {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+
+.quoteItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* MetricsGroup skeleton */
+.metricsCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+}
+
+.metricsRows {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.metricsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

@@ -27,7 +27,8 @@ export default function LoginPage({ onLogin, sessionExpired = false }) {
   return (
     <div className={styles.backdrop}>
       <div className={styles.card}>
-        <h1 className={styles.title}>Finnhub Dashboard</h1>
+        <img src="/favicon.svg" alt="EzyChart" className={styles.logo} />
+        <h1 className={styles.title}>EzyChart</h1>
         <form onSubmit={handleSubmit} className={styles.form}>
           <input
             className={styles.input}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { fetchAll } from './api.js'
 import styles from './App.module.css'
 import { TOKEN_KEY, STORAGE_KEY, THEME_KEY } from './constants.js'
@@ -13,6 +13,7 @@ import OptionsChain from './components/OptionsChain/OptionsChain.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import ResearchPanel from './components/Research/ResearchPanel.jsx'
 import BacktestPanel from './components/Backtest/BacktestPanel.jsx'
+import { SkeletonQuoteCard, SkeletonMetricsGroup } from './components/Skeleton.jsx'
 
 const MAX_COMPARE = 10
 
@@ -63,6 +64,12 @@ export default function App() {
   }
 
   const [tab, setTab] = useState('single')
+  const tabRefs = useRef({})
+  const [indicator, setIndicator] = useState({ width: 0, left: 0 })
+  useEffect(() => {
+    const el = tabRefs.current[tab]
+    if (el) setIndicator({ width: el.offsetWidth, left: el.offsetLeft })
+  }, [tab])
 
   const [singleLoading, setSingleLoading] = useState(false)
   const [singleError, setSingleError] = useState(null)
@@ -137,7 +144,7 @@ export default function App() {
     <>
     <div className={styles.app}>
       <div className={styles.header}>
-        <div className={styles.title}>Finnhub Dashboard</div>
+        <div className={styles.title}>EzyChart</div>
         <div className={styles.headerActions}>
           <button className={styles.themeBtn} onClick={toggleTheme}>
             {isDark ? 'Light mode' : 'Dark mode'}
@@ -149,9 +156,14 @@ export default function App() {
       </div>
 
       <div className={styles.tabs}>
+        <div
+          className={styles.tabIndicator}
+          style={{ width: indicator.width, transform: `translateX(${indicator.left}px)` }}
+        />
         {[['single', 'Ticker'], ['compare', 'Compare'], ['chart', 'Chart'], ['options', 'Options'], ['backtest', 'Backtest']].map(([key, label]) => (
           <button
             key={key}
+            ref={el => { tabRefs.current[key] = el }}
             className={`${styles.tab} ${tab === key ? styles.tabActive : ''}`}
             onClick={() => setTab(key)}
           >
@@ -161,9 +173,16 @@ export default function App() {
       </div>
 
       {tab === 'single' && (
-        <div>
+        <div key="single" className={styles.tabContent}>
           <SearchBar onSearch={handleSingleSearch} />
-          {singleLoading && <div className={styles.loading}>Loading...</div>}
+          {singleLoading && (
+            <>
+              <SkeletonQuoteCard />
+              <SkeletonMetricsGroup rows={5} />
+              <SkeletonMetricsGroup rows={4} />
+              <SkeletonMetricsGroup rows={6} />
+            </>
+          )}
           {singleError && <div className={styles.error}>{singleError}</div>}
           {quote && <QuoteCard quote={quote} />}
           {financials && (
@@ -181,7 +200,7 @@ export default function App() {
       )}
 
       {tab === 'chart' && (
-        <div>
+        <div key="chart" className={styles.tabContent}>
           <SearchBar onSearch={setChartSymbol} />
           {chartSymbol
             ? <StockChart symbol={chartSymbol} token={token} />
@@ -191,7 +210,7 @@ export default function App() {
       )}
 
       {tab === 'options' && (
-        <div>
+        <div key="options" className={styles.tabContent}>
           <SearchBar onSearch={setOptionsSymbol} />
           {optionsSymbol
             ? <OptionsChain symbol={optionsSymbol} token={token} onUnauthorized={handle401} />
@@ -201,7 +220,7 @@ export default function App() {
       )}
 
       {tab === 'compare' && (
-        <div>
+        <div key="compare" className={styles.tabContent}>
           <CompareSearchBar onAdd={handleCompareAdd} count={compareTickers.length} max={MAX_COMPARE} />
           {compareTickers.length === 0 ? (
             <div className={styles.empty}>Add up to {MAX_COMPARE} tickers to compare them.</div>
@@ -211,7 +230,7 @@ export default function App() {
         </div>
       )}
       {tab === 'backtest' && (
-        <div>
+        <div key="backtest" className={styles.tabContent}>
           <BacktestPanel token={token} />
         </div>
       )}
