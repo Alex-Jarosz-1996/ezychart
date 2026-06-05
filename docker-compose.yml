@@ -12,6 +12,8 @@ services:
   backend:
     build: ./backend
     env_file: ./backend/.env
+    environment:
+      - REDIS_URL=redis://redis:6379
     expose:
       - "8000"
     depends_on:

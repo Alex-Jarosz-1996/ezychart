@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, status
 from slowapi import _rate_limit_exceeded_handler
@@ -13,13 +14,27 @@ from routes.financials import router as financials_router
 from routes.mcp import router as mcp_router
 from routes.options import router as options_router
 from routes.quote import router as quote_router
+from services import mcp_service
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 
-app = FastAPI(title="Finnhub Dashboard API")
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    try:
+        await mcp_service._get_client()
+        logger.info("MCP client pre-warmed successfully")
+    except Exception:
+        logger.warning("MCP pre-warm failed — will retry on first request")
+    yield
+
+
+app = FastAPI(title="Finnhub Dashboard API", lifespan=lifespan)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

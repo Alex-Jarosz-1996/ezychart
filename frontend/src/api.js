@@ -42,12 +42,38 @@ export const getIntradayChart = (symbol, token, interval = 'minute') =>
     headers: authHeaders(token),
   }).then(handle)
 
-export const sendChatMessage = (message, token) =>
-  fetch(`${BASE}/chat`, {
+export async function* streamChatMessage(message, history, token) {
+  const resp = await fetch(`${BASE}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
-    body: JSON.stringify({ message }),
-  }).then(handle)
+    body: JSON.stringify({ message, history }),
+  })
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ detail: resp.statusText }))
+    throw new Error(err.detail || 'Request failed')
+  }
+
+  const reader = resp.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      const data = line.slice(6).trim()
+      if (data === '[DONE]') return
+      let parsed
+      try { parsed = JSON.parse(data) } catch { continue }
+      if (parsed.error) throw new Error(parsed.error)
+      if (parsed.token) yield parsed.token
+    }
+  }
+}
 
 export const runBacktest = (prices, strategies, params, token) =>
   fetch(`${BASE}/backtest/run`, {
