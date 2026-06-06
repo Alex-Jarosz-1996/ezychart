@@ -4,16 +4,91 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	"backtest/strategies"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const (
+	backtestRateLimit  = 10
+	backtestRateWindow = time.Minute
+)
+
+type ipWindow struct {
+	count     int
+	windowEnd time.Time
+}
+
+var (
+	rateMu  sync.Mutex
+	rateMap = make(map[string]*ipWindow)
+)
+
 var jwtSecret []byte
+
+func allowRequest(ip string) bool {
+	rateMu.Lock()
+	defer rateMu.Unlock()
+	now := time.Now()
+	w, ok := rateMap[ip]
+	if !ok || now.After(w.windowEnd) {
+		rateMap[ip] = &ipWindow{count: 1, windowEnd: now.Add(backtestRateWindow)}
+		return true
+	}
+	if w.count >= backtestRateLimit {
+		return false
+	}
+	w.count++
+	return true
+}
+
+func rateLimitMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !allowRequest(clientIP(r)) {
+			w.Header().Set("Retry-After", "60")
+			jsonError(w, "rate limit exceeded (10/minute)", http.StatusTooManyRequests)
+			return
+		}
+		next(w, r)
+	}
+}
+
+func clientIP(r *http.Request) string {
+	if ip := r.Header.Get("X-Real-IP"); ip != "" {
+		return ip
+	}
+	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+		if idx := strings.IndexByte(fwd, ','); idx >= 0 {
+			return strings.TrimSpace(fwd[:idx])
+		}
+		return strings.TrimSpace(fwd)
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
+func cleanupRateLimiter() {
+	for range time.Tick(5 * time.Minute) {
+		rateMu.Lock()
+		now := time.Now()
+		for ip, w := range rateMap {
+			if now.After(w.windowEnd) {
+				delete(rateMap, ip)
+			}
+		}
+		rateMu.Unlock()
+	}
+}
 
 func main() {
 	secret := os.Getenv("JWT_SECRET")
@@ -22,8 +97,10 @@ func main() {
 	}
 	jwtSecret = []byte(secret)
 
+	go cleanupRateLimiter()
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/backtest/run", authMiddleware(handleRun))
+	mux.HandleFunc("/api/backtest/run", rateLimitMiddleware(authMiddleware(handleRun)))
 
 	port := getenv("PORT", "8090")
 	log.Printf("backtest service listening on :%s", port)
@@ -54,12 +131,71 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func validateParams(strategies []string, p StrategyParams) error {
+	for _, strat := range strategies {
+		switch strat {
+		case "sma":
+			sp := SMAParams{ShortPeriod: 20, LongPeriod: 50}
+			if p.SMA != nil {
+				sp = *p.SMA
+			}
+			if sp.ShortPeriod < 1 || sp.ShortPeriod > 200 {
+				return fmt.Errorf("sma short_period must be between 1 and 200")
+			}
+			if sp.LongPeriod < 1 || sp.LongPeriod > 500 {
+				return fmt.Errorf("sma long_period must be between 1 and 500")
+			}
+			if sp.ShortPeriod >= sp.LongPeriod {
+				return fmt.Errorf("sma short_period must be less than long_period")
+			}
+		case "rsi":
+			rp := RSIParams{Period: 14, Overbought: 70, Oversold: 30}
+			if p.RSI != nil {
+				rp = *p.RSI
+			}
+			if rp.Period < 2 || rp.Period > 100 {
+				return fmt.Errorf("rsi period must be between 2 and 100")
+			}
+			if rp.Overbought < 50 || rp.Overbought > 100 {
+				return fmt.Errorf("rsi overbought must be between 50 and 100")
+			}
+			if rp.Oversold < 0 || rp.Oversold > 50 {
+				return fmt.Errorf("rsi oversold must be between 0 and 50")
+			}
+			if rp.Oversold >= rp.Overbought {
+				return fmt.Errorf("rsi oversold must be less than overbought")
+			}
+		case "macd", "vmacd":
+			fast, slow, signal := 12, 26, 9
+			if strat == "macd" && p.MACD != nil {
+				fast, slow, signal = p.MACD.FastPeriod, p.MACD.SlowPeriod, p.MACD.SignalPeriod
+			} else if strat == "vmacd" && p.VMACD != nil {
+				fast, slow, signal = p.VMACD.FastPeriod, p.VMACD.SlowPeriod, p.VMACD.SignalPeriod
+			}
+			if fast < 1 || fast > 100 {
+				return fmt.Errorf("%s fast_period must be between 1 and 100", strat)
+			}
+			if slow < 2 || slow > 200 {
+				return fmt.Errorf("%s slow_period must be between 2 and 200", strat)
+			}
+			if signal < 1 || signal > 100 {
+				return fmt.Errorf("%s signal_period must be between 1 and 100", strat)
+			}
+			if fast >= slow {
+				return fmt.Errorf("%s fast_period must be less than slow_period", strat)
+			}
+		}
+	}
+	return nil
+}
+
 func handleRun(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 512*1024)
 	var req BacktestRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "invalid request body", http.StatusBadRequest)
@@ -69,8 +205,20 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "prices must not be empty", http.StatusBadRequest)
 		return
 	}
+	if len(req.Prices) > 2000 {
+		jsonError(w, "too many price points (max 2000)", http.StatusBadRequest)
+		return
+	}
 	if len(req.Strategies) == 0 {
 		jsonError(w, "at least one strategy is required", http.StatusBadRequest)
+		return
+	}
+	if len(req.Strategies) > 4 {
+		jsonError(w, "too many strategies (max 4)", http.StatusBadRequest)
+		return
+	}
+	if err := validateParams(req.Strategies, req.Params); err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -143,7 +291,7 @@ func runStrategy(strat string, closes, volumes []float64, params StrategyParams)
 		}
 		return strategies.VMACD(closes, volumes, p.FastPeriod, p.SlowPeriod, p.SignalPeriod), nil
 	default:
-		return nil, fmt.Errorf("unknown strategy: %s", strat)
+		return nil, fmt.Errorf("unknown strategy")
 	}
 }
 

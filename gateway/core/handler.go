@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -63,6 +64,7 @@ func (g *Gateway) HandleAPI(w http.ResponseWriter, r *http.Request) {
 				log.Printf("front door quota check error for %s: %v", rule.API, err)
 			} else if used >= q.FrontDoorLimit {
 				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Retry-After", fmt.Sprintf("%d", int(q.Window.Seconds())))
 				w.WriteHeader(http.StatusTooManyRequests)
 				json.NewEncoder(w).Encode(map[string]any{
 					"error":  "front door quota exhausted",
@@ -84,6 +86,7 @@ func (g *Gateway) HandleAPI(w http.ResponseWriter, r *http.Request) {
 				log.Printf("quota check error for %s: %v", rule.API, err)
 			} else if used >= q.Limit {
 				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Retry-After", fmt.Sprintf("%d", int(q.Window.Seconds())))
 				w.WriteHeader(http.StatusTooManyRequests)
 				json.NewEncoder(w).Encode(map[string]any{
 					"error":  "quota exhausted",

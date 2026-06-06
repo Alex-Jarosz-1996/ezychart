@@ -1,3 +1,4 @@
+import hmac
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -13,9 +14,9 @@ router = APIRouter(prefix="/api/auth")
 
 
 @router.post("/login", response_model=TokenResponse)
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 def login(request: Request, body: LoginRequest):
-    if body.password != os.environ.get("APP_PASSWORD", ""):
+    if not hmac.compare_digest(body.password, os.environ.get("APP_PASSWORD", "")):
         logger.warning(
             "Failed login attempt from %s",
             request.client.host if request.client else "unknown",

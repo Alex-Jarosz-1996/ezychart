@@ -13,11 +13,14 @@ type Store struct {
 	rdb *redis.Client
 }
 
-// NewStore creates a Store connected to the Redis instance at addr.
-func NewStore(addr string) *Store {
-	return &Store{
-		rdb: redis.NewClient(&redis.Options{Addr: addr}),
+// NewStore creates a Store connected to the Redis instance at the given URL.
+// Accepts full redis:// URLs (including password) or plain host:port addresses.
+func NewStore(redisURL string) *Store {
+	opt, err := redis.ParseURL(redisURL)
+	if err != nil {
+		opt = &redis.Options{Addr: redisURL}
 	}
+	return &Store{rdb: redis.NewClient(opt)}
 }
 
 // Ping checks the Redis connection. Used for startup health checks.

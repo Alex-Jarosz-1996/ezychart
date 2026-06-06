@@ -3,8 +3,14 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+.env.*
 tests/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 mypy.ini
 ruff.toml
 requirements-dev.txt
+*.egg-info
+.git
+*.md

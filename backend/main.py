@@ -1,8 +1,8 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, status
-from slowapi import _rate_limit_exceeded_handler
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
 from core.limiter import limiter
@@ -24,6 +24,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    response = JSONResponse({"detail": f"Rate limit exceeded: {exc.detail}"}, status_code=429)
+    response.headers["Retry-After"] = "60"
+    return response
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     try:
@@ -37,7 +43,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="EzyChart API", lifespan=lifespan)
 
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 
 register_cors(app)
 app.include_router(auth_router)

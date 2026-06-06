@@ -7,6 +7,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o gateway .
 
 FROM alpine:3.19
 WORKDIR /app
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 COPY --from=builder /app/gateway .
+USER appuser
 EXPOSE 8080
 CMD ["./gateway"]

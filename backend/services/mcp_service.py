@@ -6,12 +6,12 @@ from typing import Any
 import redis.asyncio as aioredis
 from dotenv import load_dotenv
 from fastmcp import Client
+from fastmcp.client.transports import StreamableHttpTransport
 
 load_dotenv()
 
-_FMP_MCP_URL = (
-    f"https://financialmodelingprep.com/mcp?apikey={os.environ.get('FMP_API_KEY', '')}"
-)
+_FMP_MCP_URL = "https://financialmodelingprep.com/mcp"
+_FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
 
 # TTLs in seconds per tool name
 _CACHE_TTL = {"quote": 60, "marketPerformance": 120}
@@ -30,7 +30,8 @@ async def _get_client() -> Client:
         return _client
     async with _lock:
         if _client is None:
-            c = Client(_FMP_MCP_URL)
+            transport = StreamableHttpTransport(_FMP_MCP_URL, auth=_FMP_API_KEY)
+            c = Client(transport)
             await c.__aenter__()
             _client = c
     return _client
