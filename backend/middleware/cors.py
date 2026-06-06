@@ -11,5 +11,6 @@ def register_cors(app: FastAPI) -> None:
         CORSMiddleware,
         allow_origins=origins,
         allow_methods=["GET", "POST"],
-        allow_headers=["Authorization", "Content-Type"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+        expose_headers=["X-Request-ID"],
     )

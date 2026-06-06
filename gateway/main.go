@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
-	"log"
+	"log/slog"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,10 +19,60 @@ import (
 
 var jwtSecret []byte
 
+// statusWriter captures the HTTP status code written by a handler.
+type statusWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (sw *statusWriter) WriteHeader(code int) {
+	sw.status = code
+	sw.ResponseWriter.WriteHeader(code)
+}
+
+// Flush propagates flushes so streaming responses (SSE, chunked) work through
+// the middleware.
+func (sw *statusWriter) Flush() {
+	if f, ok := sw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+func newRequestID() string {
+	b := make([]byte, 6)
+	rand.Read(b) //nolint:gosec — request IDs need not be cryptographically random
+	return hex.EncodeToString(b)
+}
+
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqID := r.Header.Get("X-Request-ID")
+		if reqID == "" {
+			reqID = newRequestID()
+			r.Header.Set("X-Request-ID", reqID)
+		}
+		start := time.Now()
+		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(sw, r)
+		slog.Info("request",
+			"request_id", reqID,
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", sw.status,
+			"ms", time.Since(start).Milliseconds(),
+		)
+	})
+}
+
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	})))
+
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		log.Fatal("JWT_SECRET env var is required")
+		slog.Error("JWT_SECRET env var is required")
+		os.Exit(1)
 	}
 	jwtSecret = []byte(secret)
 
@@ -33,18 +85,21 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := db.Ping(ctx); err != nil {
-		log.Fatalf("cannot connect to Redis at %s: %v", redisAddr, err)
+		slog.Error("cannot connect to Redis", "addr", redisAddr, "error", err)
+		os.Exit(1)
 	}
-	log.Printf("connected to Redis at %s", redisAddr)
+	slog.Info("connected to Redis", "addr", redisAddr)
 
 	target, err := url.Parse(fastapiURL)
 	if err != nil {
-		log.Fatalf("invalid FASTAPI_URL %q: %v", fastapiURL, err)
+		slog.Error("invalid FASTAPI_URL", "url", fastapiURL, "error", err)
+		os.Exit(1)
 	}
 
 	backtestTarget, err := url.Parse(backtestURL)
 	if err != nil {
-		log.Fatalf("invalid BACKTEST_URL %q: %v", backtestURL, err)
+		slog.Error("invalid BACKTEST_URL", "url", backtestURL, "error", err)
+		os.Exit(1)
 	}
 
 	gw := core.NewGateway(db, core.NewProxy(target, db), core.NewBacktestProxy(backtestTarget))
@@ -56,9 +111,10 @@ func main() {
 	mux.HandleFunc("/api/quota/status", authMiddleware(gw.HandleQuotaStatus))
 	mux.HandleFunc("/api/", gw.HandleAPI)
 
-	log.Printf("gateway listening on :8080 → FastAPI at %s, backtest at %s", fastapiURL, backtestURL)
-	if err := http.ListenAndServe(":8080", mux); err != nil {
-		log.Fatal(err)
+	slog.Info("gateway listening", "addr", ":8080", "fastapi", fastapiURL, "backtest", backtestURL)
+	if err := http.ListenAndServe(":8080", loggingMiddleware(mux)); err != nil {
+		slog.Error("server error", "error", err)
+		os.Exit(1)
 	}
 }
 

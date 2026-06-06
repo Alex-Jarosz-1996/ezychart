@@ -25,6 +25,11 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   backtest:
     build: ./backtest
@@ -36,6 +41,11 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   gateway:
     build: ./gateway
@@ -61,6 +71,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   frontend:
     build: ./frontend

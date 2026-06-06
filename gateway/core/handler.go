@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -61,7 +61,7 @@ func (g *Gateway) HandleAPI(w http.ResponseWriter, r *http.Request) {
 		if q, ok := Quotas[rule.API]; ok && q.FrontDoorLimit > 0 {
 			used, err := g.Store.CheckFrontDoorQuota(ctx, rule.API, q.Window)
 			if err != nil {
-				log.Printf("front door quota check error for %s: %v", rule.API, err)
+				slog.Warn("front door quota check error", "api", rule.API, "error", err)
 			} else if used >= q.FrontDoorLimit {
 				w.Header().Set("Content-Type", "application/json")
 				w.Header().Set("Retry-After", fmt.Sprintf("%d", int(q.Window.Seconds())))
@@ -83,7 +83,7 @@ func (g *Gateway) HandleAPI(w http.ResponseWriter, r *http.Request) {
 		if q, ok := Quotas[rule.API]; ok {
 			used, err := g.Store.CheckQuota(ctx, rule.API, q.Window)
 			if err != nil {
-				log.Printf("quota check error for %s: %v", rule.API, err)
+				slog.Warn("quota check error", "api", rule.API, "error", err)
 			} else if used >= q.Limit {
 				w.Header().Set("Content-Type", "application/json")
 				w.Header().Set("Retry-After", fmt.Sprintf("%d", int(q.Window.Seconds())))
@@ -118,7 +118,7 @@ func (g *Gateway) HandleQuotaStatus(w http.ResponseWriter, r *http.Request) {
 func NewBacktestProxy(target *url.URL) *httputil.ReverseProxy {
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		log.Printf("backtest proxy error for %s: %v", r.URL.Path, err)
+		slog.Error("backtest proxy error", "path", r.URL.Path, "error", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadGateway)
 		json.NewEncoder(w).Encode(map[string]string{"error": "backtest service unavailable"})
@@ -146,11 +146,11 @@ func NewProxy(target *url.URL, db *Store) *httputil.ReverseProxy {
 		if rule.API != "" {
 			if q, ok := Quotas[rule.API]; ok {
 				if _, err := db.IncrQuota(ctx, rule.API, q.Window); err != nil {
-					log.Printf("quota increment error for %s: %v", rule.API, err)
+					slog.Warn("quota increment error", "api", rule.API, "error", err)
 				}
 				if q.FrontDoorLimit > 0 {
 					if _, err := db.IncrFrontDoorQuota(ctx, rule.API, q.Window); err != nil {
-						log.Printf("front door quota increment error for %s: %v", rule.API, err)
+						slog.Warn("front door quota increment error", "api", rule.API, "error", err)
 					}
 				}
 			}
@@ -167,7 +167,7 @@ func NewProxy(target *url.URL, db *Store) *httputil.ReverseProxy {
 			path := resp.Request.URL.Path
 			query := resp.Request.URL.RawQuery
 			if err := db.SetCache(ctx, path, query, string(body), rule.CacheTTL); err != nil {
-				log.Printf("cache write error for %s: %v", path, err)
+				slog.Warn("cache write error", "path", path, "error", err)
 			}
 		}
 
@@ -175,7 +175,7 @@ func NewProxy(target *url.URL, db *Store) *httputil.ReverseProxy {
 	}
 
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		log.Printf("proxy error for %s: %v", r.URL.Path, err)
+		slog.Error("proxy error", "path", r.URL.Path, "error", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadGateway)
 		json.NewEncoder(w).Encode(map[string]string{"error": "upstream unavailable"})
