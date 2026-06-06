@@ -1,9 +1,17 @@
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api'
 
+function _toMessage(status, err) {
+  if (status === 404) return 'Incorrect stock ticker entered'
+  const detail = err?.detail
+  if (Array.isArray(detail)) return detail[0]?.msg ?? 'Request failed'
+  if (typeof detail === 'string' && detail) return detail
+  return 'Request failed'
+}
+
 const handle = async (res) => {
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(err.detail || 'Request failed')
+    const err = await res.json().catch(() => null)
+    throw new Error(_toMessage(res.status, err))
   }
   return res.json()
 }
@@ -49,8 +57,8 @@ export async function* streamChatMessage(message, history, token) {
     body: JSON.stringify({ message, history }),
   })
   if (!resp.ok) {
-    const err = await resp.json().catch(() => ({ detail: resp.statusText }))
-    throw new Error(err.detail || 'Request failed')
+    const err = await resp.json().catch(() => null)
+    throw new Error(_toMessage(resp.status, err))
   }
 
   const reader = resp.body.getReader()
