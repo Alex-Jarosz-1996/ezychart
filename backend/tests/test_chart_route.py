@@ -27,12 +27,10 @@ def test_get_eod_chart_returns_200_with_correct_shape(
     assert body["data"][0]["price"] == 189.0
 
 
-def test_get_eod_chart_returns_403_without_token(client: TestClient, mocker):
-    mocker.patch("services.chart_service.get_eod", return_value={})
-
+def test_get_eod_chart_returns_401_without_token(client: TestClient):
     response = client.get("/api/chart/eod/AAPL")
 
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_get_eod_chart_invalid_range_falls_back_to_1y(
@@ -128,12 +126,10 @@ def test_get_eod_candle_chart_returns_200_with_correct_shape(
     assert body["data"][0]["close"] == 185.92
 
 
-def test_get_eod_candle_chart_returns_403_without_token(client: TestClient, mocker):
-    mocker.patch("services.chart_service.get_eod_candle", return_value={})
-
+def test_get_eod_candle_chart_returns_401_without_token(client: TestClient):
     response = client.get("/api/chart/eod-candle/AAPL")
 
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_get_eod_candle_chart_invalid_range_falls_back_to_1y(
@@ -186,12 +182,10 @@ def test_get_intraday_chart_returns_200_with_correct_shape(
     assert isinstance(body["data"], list)
 
 
-def test_get_intraday_chart_returns_403_without_token(client: TestClient, mocker):
-    mocker.patch("services.chart_service.get_intraday", return_value={})
-
+def test_get_intraday_chart_returns_401_without_token(client: TestClient):
     response = client.get("/api/chart/intraday/AAPL")
 
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_get_intraday_chart_invalid_interval_falls_back_to_minute(

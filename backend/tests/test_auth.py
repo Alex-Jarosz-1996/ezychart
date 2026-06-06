@@ -26,10 +26,10 @@ def test_login_wrong_password_returns_401(client: TestClient):
     assert "Invalid password" in response.json()["detail"]
 
 
-def test_protected_route_without_token_returns_403(client: TestClient):
+def test_protected_route_without_token_returns_401(client: TestClient):
     response = client.get("/api/quote/AAPL")
 
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_health_endpoint_returns_ok(client: TestClient):

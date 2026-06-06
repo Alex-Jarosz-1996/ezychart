@@ -70,9 +70,7 @@ def test_quote_returns_429_on_rate_limit(client: TestClient, auth_headers, mocke
     assert "rate limit" in response.json()["detail"].lower()
 
 
-def test_quote_returns_403_without_token(client: TestClient, mocker):
-    mocker.patch("services.finnhub_service.get_quote", return_value=MOCK_QUOTE)
-
+def test_quote_returns_401_without_token(client: TestClient):
     response = client.get("/api/quote/AAPL")
 
-    assert response.status_code == 403
+    assert response.status_code == 401

@@ -70,10 +70,10 @@ def test_options_returns_429_on_rate_limit(client: TestClient, auth_headers, moc
     assert "rate limit" in response.json()["detail"].lower()
 
 
-def test_options_returns_403_without_token(client: TestClient):
+def test_options_returns_401_without_token(client: TestClient):
     response = client.get("/api/options/AAPL")
 
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_options_rejects_invalid_symbol(client: TestClient, auth_headers):
